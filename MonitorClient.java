@@ -12,6 +12,7 @@
  import java.net.*;
 
 public class MonitorClient {
+	static int REQUEST_NUM = 40;
     public static void main(String args[]) throws Exception {
 
 		BufferedReader inFromUser = new BufferedReader(new InputStreamReader(
@@ -33,14 +34,16 @@ public class MonitorClient {
 
 		System.out.print("SENDING 40 ECHO REQUESTS");
 
+		for(int i = 0; i <  REQUEST_NUM; i++) {
+			String sentence = "Hello" + i;
+			sendData = sentence.getBytes();
+		}
 		
-		String sentence = inFromUser.readLine();
-		sendData = sentence.getBytes();
 
 		//In UDP, you must contrusct the datagram explicitly, with 
 		//DatagramPacket below.
 		DatagramPacket sendPacket = new DatagramPacket(sendData,
-				sendData.length, IPAddress, 2424);
+				sendData.length, IPAddress, port);
 
 		System.out.println("Sending data of " + sendData.length
 				+ " bytes to server.");
