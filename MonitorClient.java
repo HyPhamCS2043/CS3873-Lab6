@@ -19,22 +19,28 @@ public class MonitorClient {
 
 		//java class for UDP socket
 		DatagramSocket clientSocket = new DatagramSocket();
+
+		//Obtaining the server IP address
 		InetAddress IPAddress = InetAddress.getByName(args[0]);
 
+		int port = Integer.parseInt(args[1]);
+
 		System.out.println("Attemping to connect to " + IPAddress
-				+ " via UDP port 9876");
+				+ " via UDP port " + port);
 
 		byte[] sendData = new byte[1024];
 		byte[] receiveData = new byte[1024];
 
-		System.out.print("Enter message: ");
+		System.out.print("SENDING 40 ECHO REQUESTS");
+
+		
 		String sentence = inFromUser.readLine();
 		sendData = sentence.getBytes();
 
 		//In UDP, you must contrusct the datagram explicitly, with 
 		//DatagramPacket below.
 		DatagramPacket sendPacket = new DatagramPacket(sendData,
-				sendData.length, IPAddress, 9876);
+				sendData.length, IPAddress, 2424);
 
 		System.out.println("Sending data of " + sendData.length
 				+ " bytes to server.");
@@ -53,12 +59,12 @@ public class MonitorClient {
 		clientSocket.receive(receivePacket);
 
 		InetAddress returnIPAddress = receivePacket.getAddress();
-		int port = receivePacket.getPort();
-		System.out.println("From server at: " + returnIPAddress + ":" + port);
+		//int port = receivePacket.getPort();
+		//System.out.println("From server at: " + returnIPAddress + ":" + port);
 
-		String modifiedSentence = new String(receivePacket.getData());
+		//String modifiedSentence = new String(receivePacket.getData());
 
-		System.out.println("RETURNED MESSAGE FROM SERVER: " + modifiedSentence);
+		//System.out.println("RETURNED MESSAGE FROM SERVER: " + modifiedSentence);
 		clientSocket.close();
 	}
 }

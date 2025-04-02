@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 class MonitorServer {
     static final int MAX_MSG_LEN = 1024;
-    static final int SERVER_PORT = 9000;
+    static final int SERVER_PORT = 2424;
     static final int MAX_DELAY = 2000; // in milliseconds
     static final double LOSS_PROBABILITY = 0.4;  // probability a reply is not returned (i.e., lost)
     static final int RND_SEED = 1234;
