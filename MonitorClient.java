@@ -67,11 +67,11 @@ public class MonitorClient {
 			DatagramPacket receivePacket = new DatagramPacket(receiveData,
 					receiveData.length);
 
-		
+			clientSocket.setSoTimeout(1000);
 			try {
 				//This receive is a blocking method
 				//If no datagram arrives, the program holds here.
-				clientSocket.setSoTimeout(1000);
+				
 				clientSocket.receive(receivePacket);
 
 				long endTime = System.nanoTime();
@@ -89,8 +89,11 @@ public class MonitorClient {
 			} catch (SocketTimeoutException e) {
 				responseMessage = "No reply";
 				
-				//Place 0 to indicate that there was no reply
+				//Place 0 to indicate that there was no reply 
+				// to request i
 				matchedRTTArray[i][1] = 0;
+
+				System.out.println("Time out after 1 second");
 			}	
 
 
