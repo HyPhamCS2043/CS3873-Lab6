@@ -43,11 +43,7 @@ public class MonitorClient {
     }
     public static void main(String args[]) throws Exception {
 
-		estimatedRTT = 0;
 		
-
-		BufferedReader inFromUser = new BufferedReader(new InputStreamReader(
-				System.in));
 
 		//java class for UDP socket
 		DatagramSocket clientSocket = new DatagramSocket();
@@ -65,8 +61,6 @@ public class MonitorClient {
 
 		//ArrayList to keep track of each request-response pair
 		ArrayList<RequestInfo> requestList = new ArrayList<RequestInfo>();
-
-		String responseMessage = "";
 
 		System.out.print("SENDING 40 ECHO REQUESTS");
 
@@ -158,7 +152,7 @@ public class MonitorClient {
             if (echo.replied) {
                 System.out.println("Request " + echo.requestId + ": RTT = " + echo.rtt);
             } else {
-                System.out.println("Request "+ echo.requestId + "no reply");
+                System.out.println("Request "+ echo.requestId + ": no reply");
             }
         }
         
