@@ -21,9 +21,15 @@ public class MonitorClient {
     static final double ALPHA = 0.125; // Weight for EstimatedRTT
     static final double BETA = 0.25; // Weight for DevRTT
 	
+
+    private static int port;
+    private static DatagramSocket clientSocket;
+    private static InetAddress IPAddress;
 	private static double estimatedRTT;
     private static double devRTT;
     private static int numOfUpdates;
+
+	private static ArrayList<RequestInfo> requestList;
 
 	// A class to keep track of information of each request
     private static class RequestInfo {
@@ -43,44 +49,28 @@ public class MonitorClient {
     }
     public static void main(String args[]) throws Exception {
 
-		
-
 		//java class for UDP socket
-		DatagramSocket clientSocket = new DatagramSocket();
+		clientSocket = new DatagramSocket();
 
 		//Obtaining the server IP address
-		InetAddress IPAddress = InetAddress.getByName(args[0]);
+		IPAddress = InetAddress.getByName(args[0]);
 
-		int port = Integer.parseInt(args[1]);
+		port = Integer.parseInt(args[1]);
 
 		System.out.println("Attemping to connect to " + IPAddress
 				+ " via UDP port " + port);
 
-		byte[] sendData = new byte[1024];
 		byte[] receiveData = new byte[1024];
 
 		//ArrayList to keep track of each request-response pair
-		ArrayList<RequestInfo> requestList = new ArrayList<RequestInfo>();
+		requestList = new ArrayList<RequestInfo>();
 
 		System.out.print("SENDING 40 ECHO REQUESTS");
 
-		for(int i = 0; i <  REQUEST_NUM; i++) {	
-			String sentence = "Hello " + i + " ";
-			sendData = sentence.getBytes();
-
-			DatagramPacket sendPacket = new DatagramPacket(sendData,
-			sendData.length, IPAddress, port);
-
-			// Measuring sent time of request i
-			long sentTime = System.nanoTime();
-
-			clientSocket.send(sendPacket);
-
-			 // Adding the request and its sent time into the list
-			requestList.add(new RequestInfo(i, sentTime));
-		}
-
 		clientSocket.setSoTimeout(REQUEST_TIMEOUT);
+
+		
+		sendingRequests();
 
 		//Variable to hold the time of the current last response
 		long lastResponseTime = System.nanoTime();
@@ -168,5 +158,27 @@ public class MonitorClient {
         }
 		
 		clientSocket.close();
+	}
+
+	private static void sendingRequests() {
+		for(int i = 0; i <  REQUEST_NUM; i++) {	
+			String sentence = "Hello " + i + " ";
+			byte[] sendData = sentence.getBytes();
+
+			DatagramPacket sendPacket = new DatagramPacket(sendData,
+			sendData.length, IPAddress, port);
+
+			// Measuring sent time of request i
+			long sentTime = System.nanoTime();
+
+			try {
+				clientSocket.send(sendPacket);
+			} catch (IOException e) {
+				System.out.println("IO Exception: " + e.getMessage());
+			}
+
+			 // Adding the request and its sent time into the list
+			requestList.add(new RequestInfo(i, sentTime));
+		}
 	}
 }
