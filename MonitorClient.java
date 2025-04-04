@@ -21,9 +21,9 @@ public class MonitorClient {
     static final double ALPHA = 0.125; // Weight for EstimatedRTT
     static final double BETA = 0.25; // Weight for DevRTT
 	
-	private double estimatedRTT;
-    private double devRTT;
-    private int updateCount;
+	private static double estimatedRTT;
+    private static double devRTT;
+    private static int numOfUpdates;
 
 	// A class to keep track of information of each request
     private static class RequestInfo {
@@ -37,11 +37,14 @@ public class MonitorClient {
         RequestInfo(int requestId, long sentTime) {
             this.requestId = requestId;
             this.sentTime = sentTime;
-            this.rtt = -1;
+            this.rtt = -1; 
             this.replied = false;
         }
     }
     public static void main(String args[]) throws Exception {
+
+		estimatedRTT = 0;
+		
 
 		BufferedReader inFromUser = new BufferedReader(new InputStreamReader(
 				System.in));
@@ -110,13 +113,24 @@ public class MonitorClient {
 						// Look through the arrayList for the corresponding requests
 						for (RequestInfo echo : requestList) {
 							if (echo.requestId == requestId && !echo.replied) {
-								// Calculate RTT
+
+								// Calculate RTT of successful request-response echo.
 								long sampleRTT = responseTime - echo.sentTime;
 								echo.rtt = (int) sampleRTT;
 								echo.replied = true;
-								
-								// Update EstimatedRTT and DevRTT
-								updateRTTEstimates(sampleRTT);
+
+								//Check if this is the first time estimatedRTT and devRTT has been updated or not
+								if (numOfUpdates == 0) {
+									estimatedRTT = sampleRTT;
+									devRTT = sampleRTT / 2;
+								} else {
+
+									double difference = sampleRTT - estimatedRTT;
+									estimatedRTT = estimatedRTT + ALPHA * difference;
+									devRTT = devRTT + BETA * (Math.abs(difference) - devRTT);
+								}
+								numOfUpdates++;
+
 								break;
 							}
 						}
@@ -136,7 +150,28 @@ public class MonitorClient {
             }
         }
 
+		//Printing out the result
+		System.out.println("\nTEST OUTPUT:");
+        System.out.println("---------------");
+        
+        for (RequestInfo echo : requestList) {
+            if (echo.replied) {
+                System.out.println("Request " + echo.requestId + ": RTT = " + echo.rtt);
+            } else {
+                System.out.println("Request "+ echo.requestId + "no reply");
+            }
+        }
+        
+        System.out.println("\nEND OF TEST:");
+        System.out.println("-------------------");
+        System.out.println("Number of requests sent: " + REQUEST_NUM);
+        System.out.println("Number of replies received: " + numOfUpdates);
 
+		//If there is at least one successful reply
+        if (numOfUpdates > 0) {
+            System.out.printf("Final EstimatedRTT: %.2f ms%n", estimatedRTT);
+            System.out.printf("Final DevRTT: %.2f ms%n", devRTT);
+        }
 		
 		clientSocket.close();
 	}
