@@ -11,8 +11,25 @@
  import java.io.*;
  import java.net.*;
 
+
 public class MonitorClient {
-	static int REQUEST_NUM = 40;
+	static final int REQUEST_NUM = 40;
+	static final int REQUEST_TIMEOUT = 1000;
+
+	// A class to keep track of information of each request
+    private static class RequestInfo {
+        int requestId;
+        long sentTime;
+        int rtt;
+        boolean replied;
+        
+        RequestInfo(int requestId, long sentTime) {
+            this.requestId = requestId;
+            this.sentTime = sentTime;
+            this.rtt = -1;
+            this.replied = false;
+        }
+    }
     public static void main(String args[]) throws Exception {
 
 		BufferedReader inFromUser = new BufferedReader(new InputStreamReader(
@@ -67,7 +84,7 @@ public class MonitorClient {
 			DatagramPacket receivePacket = new DatagramPacket(receiveData,
 					receiveData.length);
 
-			clientSocket.setSoTimeout(1000);
+			clientSocket.setSoTimeout(REQUEST_TIMEOUT);
 			try {
 				//This receive is a blocking method
 				//If no datagram arrives, the program holds here.
