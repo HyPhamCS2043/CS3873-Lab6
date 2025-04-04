@@ -10,11 +10,20 @@
 
  import java.io.*;
  import java.net.*;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class MonitorClient {
 	static final int REQUEST_NUM = 40;
 	static final int REQUEST_TIMEOUT = 1000;
+    static final int CLEARANCE_PERIOD = 5000;
+    static final double ALPHA = 0.125; // Weight for EstimatedRTT
+    static final double BETA = 0.25; // Weight for DevRTT
+	
+	private double estimatedRTT;
+    private double devRTT;
+    private int updateCount;
 
 	// A class to keep track of information of each request
     private static class RequestInfo {
@@ -23,6 +32,8 @@ public class MonitorClient {
         int rtt;
         boolean replied;
         
+		//Create a request-response info pack using 
+		//request ID number and the time it was sent
         RequestInfo(int requestId, long sentTime) {
             this.requestId = requestId;
             this.sentTime = sentTime;
@@ -49,77 +60,83 @@ public class MonitorClient {
 		byte[] sendData = new byte[1024];
 		byte[] receiveData = new byte[1024];
 
-		//2D Array to keep track of RTT of each request-response pair
-		//Each row corresponds to a request.
-		long[][] matchedRTTArray = new long[40][2];
+		//ArrayList to keep track of each request-response pair
+		ArrayList<RequestInfo> requestList = new ArrayList<RequestInfo>();
+
+		String responseMessage = "";
 
 		System.out.print("SENDING 40 ECHO REQUESTS");
 
-		for(int i = 0; i <  REQUEST_NUM; i++) {
-			
-			String sentence = "Hello " + i;
+		for(int i = 0; i <  REQUEST_NUM; i++) {	
+			String sentence = "Hello " + i + " ";
 			sendData = sentence.getBytes();
-
-			String responseMessage = "";
 
 			DatagramPacket sendPacket = new DatagramPacket(sendData,
 			sendData.length, IPAddress, port);
 
-			System.out.println("Sending data of " + sendData.length
-					+ " bytes to server.");
+			// Measuring sent time of request i
+			long sentTime = System.nanoTime();
 
-			//the send and receive can be a loop for multiple requests (lab 6)
 			clientSocket.send(sendPacket);
 
-			// Begin measuring RTT
-			long startTime = System.nanoTime();
-
-			//Placing the initial time of request i into corresponding 
-			//cell in the matchedRTTArray.
-			matchedRTTArray[i][0] = startTime;
-
-			System.out.println("Done. Waiting for return packet");
-
-			//must also create a receive packet to save server response
-			DatagramPacket receivePacket = new DatagramPacket(receiveData,
-					receiveData.length);
-
-			clientSocket.setSoTimeout(REQUEST_TIMEOUT);
-			try {
-				//This receive is a blocking method
-				//If no datagram arrives, the program holds here.
-				
-				clientSocket.receive(receivePacket);
-
-				long endTime = System.nanoTime();
-
-				responseMessage = new String(receivePacket.getData());
-
-				//Decode the String response to identify its corresponding request
-				int requestID = Character.getNumericValue(responseMessage.charAt(6));
-
-				//Calculating the RTT and places it
-				//into the corresponding row based on request number.
-				matchedRTTArray[requestID][1] = endTime - matchedRTTArray[requestID][1];
-
-
-			} catch (SocketTimeoutException e) {
-				responseMessage = "No reply";
-				
-				//Place 0 to indicate that there was no reply 
-				// to request i
-				matchedRTTArray[i][1] = 0;
-
-				System.out.println("Time out after 1 second");
-			}	
-
-
-			System.out.println(responseMessage);
-
+			 // Adding the request and its sent time into the list
+			requestList.add(new RequestInfo(i, sentTime));
 		}
-		
 
-		//InetAddress returnIPAddress = receivePacket.getAddress();
+		clientSocket.setSoTimeout(REQUEST_TIMEOUT);
+
+		//Variable to hold the time of the current last response
+		long lastResponseTime = System.nanoTime();
+
+		//Boolean to check if there is more response from server
+        boolean stillMoreResponse = true;
+        
+        while (stillMoreResponse) {
+            try {
+                DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                clientSocket.receive(receivePacket);
+                
+				//Measure time of receiving response from server
+				long responseTime = System.nanoTime();
+
+				String reply = new String(receivePacket.getData()).trim();
+				
+				// Parse the request ID from the reply (e.g., "HELLO 5")
+				try {
+					String[] parts = reply.split(" ");
+					if (parts.length >= 2) {
+						int requestId = Integer.parseInt(parts[1]);
+						
+						// Look through the arrayList for the corresponding requests
+						for (RequestInfo echo : requestList) {
+							if (echo.requestId == requestId && !echo.replied) {
+								// Calculate RTT
+								long sampleRTT = responseTime - echo.sentTime;
+								echo.rtt = (int) sampleRTT;
+								echo.replied = true;
+								
+								// Update EstimatedRTT and DevRTT
+								updateRTTEstimates(sampleRTT);
+								break;
+							}
+						}
+					}
+				} catch (NumberFormatException e) {
+					System.out.println("Error parsing reply: " + reply);
+				}
+
+                lastResponseTime = System.currentTimeMillis();
+
+            } catch (SocketTimeoutException e) {
+				//Once the final echo request is sent and after the 1 second wait period,
+				//wait 5 more seconds to see if there is any more response.
+                if (System.nanoTime() - lastResponseTime >= CLEARANCE_PERIOD) {
+                    stillMoreResponse = false;
+                }
+            }
+        }
+
+
 		
 		clientSocket.close();
 	}
