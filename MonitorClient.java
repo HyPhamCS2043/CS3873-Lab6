@@ -8,11 +8,9 @@
  * Created based on the UDPClient.java file obtained from CS3873 Lab 4.
  */
 
- import java.io.*;
- import java.net.*;
+import java.io.*;
+import java.net.*;
 import java.util.ArrayList;
-import java.util.List;
-
 
 public class MonitorClient {
 	static final int REQUEST_NUM = 40;
@@ -60,8 +58,6 @@ public class MonitorClient {
 		System.out.println("Attemping to connect to " + IPAddress
 				+ " via UDP port " + port);
 
-		byte[] receiveData = new byte[1024];
-
 		//ArrayList to keep track of each request-response pair
 		requestList = new ArrayList<RequestInfo>();
 
@@ -69,11 +65,64 @@ public class MonitorClient {
 
 		clientSocket.setSoTimeout(REQUEST_TIMEOUT);
 
+		try {
+			sendingRequests();
+
+			parsingResponse();
+		} catch (IOException e) {
+			System.out.println("IO Exception: " + e);
+		}
 		
-		sendingRequests();
+
+		//Printing out the result
+		System.out.println("\nTEST OUTPUT:");
+        System.out.println("---------------");
+        
+        for (RequestInfo echo : requestList) {
+            if (echo.replied) {
+                System.out.println("Request " + echo.requestId + ": RTT = " + echo.rtt);
+            } else {
+                System.out.println("Request "+ echo.requestId + ": no reply");
+            }
+        }
+        
+        System.out.println("\nEND OF TEST:");
+        System.out.println("-------------------");
+        System.out.println("Number of requests sent: " + REQUEST_NUM);
+        System.out.println("Number of replies received: " + numOfUpdates);
+
+		//If there is at least one successful reply
+        if (numOfUpdates > 0) {
+            System.out.printf("Final EstimatedRTT: %.2f ms%n", estimatedRTT);
+            System.out.printf("Final DevRTT: %.2f ms%n", devRTT);
+        }
+		
+		clientSocket.close();
+	}
+
+	private static void sendingRequests() throws IOException {
+		for(int i = 0; i <  REQUEST_NUM; i++) {	
+			String sentence = "Hello " + i + " ";
+			byte[] sendData = sentence.getBytes();
+
+			DatagramPacket sendPacket = new DatagramPacket(sendData,
+			sendData.length, IPAddress, port);
+
+			// Measuring sent time of request i
+			long sentTime = System.currentTimeMillis();
+
+			clientSocket.send(sendPacket);
+			
+			 // Adding the request and its sent time into the list
+			requestList.add(new RequestInfo(i, sentTime));
+		}
+	}
+
+	private static void parsingResponse() throws IOException{
+		byte[] receiveData = new byte[1024];
 
 		//Variable to hold the time of the current last response
-		long lastResponseTime = System.nanoTime();
+		long lastResponseTime = System.currentTimeMillis();
 
 		//Boolean to check if there is more response from server
         boolean stillMoreResponse = true;
@@ -84,7 +133,7 @@ public class MonitorClient {
                 clientSocket.receive(receivePacket);
                 
 				//Measure time of receiving response from server
-				long responseTime = System.nanoTime();
+				long responseTime = System.currentTimeMillis();
 
 				String reply = new String(receivePacket.getData()).trim();
 				
@@ -128,57 +177,10 @@ public class MonitorClient {
             } catch (SocketTimeoutException e) {
 				//Once the final echo request is sent and after the 1 second wait period,
 				//wait 5 more seconds to see if there is any more response.
-                if (System.nanoTime() - lastResponseTime >= CLEARANCE_PERIOD) {
+                if (System.currentTimeMillis() - lastResponseTime >= CLEARANCE_PERIOD) {
                     stillMoreResponse = false;
                 }
             }
         }
-
-		//Printing out the result
-		System.out.println("\nTEST OUTPUT:");
-        System.out.println("---------------");
-        
-        for (RequestInfo echo : requestList) {
-            if (echo.replied) {
-                System.out.println("Request " + echo.requestId + ": RTT = " + echo.rtt);
-            } else {
-                System.out.println("Request "+ echo.requestId + ": no reply");
-            }
-        }
-        
-        System.out.println("\nEND OF TEST:");
-        System.out.println("-------------------");
-        System.out.println("Number of requests sent: " + REQUEST_NUM);
-        System.out.println("Number of replies received: " + numOfUpdates);
-
-		//If there is at least one successful reply
-        if (numOfUpdates > 0) {
-            System.out.printf("Final EstimatedRTT: %.2f ms%n", estimatedRTT);
-            System.out.printf("Final DevRTT: %.2f ms%n", devRTT);
-        }
-		
-		clientSocket.close();
-	}
-
-	private static void sendingRequests() {
-		for(int i = 0; i <  REQUEST_NUM; i++) {	
-			String sentence = "Hello " + i + " ";
-			byte[] sendData = sentence.getBytes();
-
-			DatagramPacket sendPacket = new DatagramPacket(sendData,
-			sendData.length, IPAddress, port);
-
-			// Measuring sent time of request i
-			long sentTime = System.nanoTime();
-
-			try {
-				clientSocket.send(sendPacket);
-			} catch (IOException e) {
-				System.out.println("IO Exception: " + e.getMessage());
-			}
-
-			 // Adding the request and its sent time into the list
-			requestList.add(new RequestInfo(i, sentTime));
-		}
 	}
 }
