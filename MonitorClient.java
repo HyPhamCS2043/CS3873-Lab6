@@ -32,41 +32,72 @@ public class MonitorClient {
 		byte[] sendData = new byte[1024];
 		byte[] receiveData = new byte[1024];
 
+		//2D Array to keep track of RTT of each request-response pair
+		//Each row corresponds to a request.
+		long[][] matchedRTTArray = new long[40][2];
+
 		System.out.print("SENDING 40 ECHO REQUESTS");
 
 		for(int i = 0; i <  REQUEST_NUM; i++) {
+			
 			String sentence = "Hello " + i;
 			sendData = sentence.getBytes();
+
+			String responseMessage = "";
+
+			DatagramPacket sendPacket = new DatagramPacket(sendData,
+			sendData.length, IPAddress, port);
+
+			System.out.println("Sending data of " + sendData.length
+					+ " bytes to server.");
+
+			//the send and receive can be a loop for multiple requests (lab 6)
+			clientSocket.send(sendPacket);
+
+			// Begin measuring RTT
+			long startTime = System.nanoTime();
+
+			//Placing the initial time of request i into corresponding 
+			//cell in the matchedRTTArray.
+			matchedRTTArray[i][0] = startTime;
+
+			System.out.println("Done. Waiting for return packet");
+
+			//must also create a receive packet to save server response
+			DatagramPacket receivePacket = new DatagramPacket(receiveData,
+					receiveData.length);
+
+		
+			try {
+				//This receive is a blocking method
+				//If no datagram arrives, the program holds here.
+				clientSocket.setSoTimeout(1000);
+				clientSocket.receive(receivePacket);
+
+				long endTime = System.nanoTime();
+
+				responseMessage = new String(receivePacket.getData());
+
+				//Decode the String response to identify its corresponding request
+				int requestID = Character.getNumericValue(responseMessage.charAt(6));
+
+				//Calculating the RTT and places it
+				//into the corresponding row based on request number.
+				matchedRTTArray[requestID][1] = endTime - matchedRTTArray[requestID][1];
+
+
+			} catch (SocketTimeoutException e) {
+				responseMessage = "No reply";
+				
+				//Place 0 to indicate that there was no reply
+				matchedRTTArray[i][1] = 0;
+			}	
+
+
+			System.out.println(responseMessage);
+
 		}
 		
-		//In UDP, you must contrusct the datagram explicitly, with 
-		//DatagramPacket below.
-		DatagramPacket sendPacket = new DatagramPacket(sendData,
-				sendData.length, IPAddress, port);
-
-		System.out.println("Sending data of " + sendData.length
-				+ " bytes to server.");
-
-		//the send and receive can be a loop for multiple requests (lab 6)
-		clientSocket.send(sendPacket);
-
-		// Begin measuring execution time
-		long startTime = System.nanoTime();
-
-		System.out.println("Done. Waiting for return packet");
-
-		//must also create a receive packet to save server response
-		DatagramPacket receivePacket = new DatagramPacket(receiveData,
-				receiveData.length);
-
-		//This receive is a blocking method
-		//If no datagram arrives, the program holds here.
-		clientSocket.receive(receivePacket);
-		long endTime = System.nanoTime();
-
-		long requestRTT = endTime - startTime;
-
-		System.out.println(receivePacket.getData());
 
 		//InetAddress returnIPAddress = receivePacket.getAddress();
 		
