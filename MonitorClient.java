@@ -35,11 +35,10 @@ public class MonitorClient {
 		System.out.print("SENDING 40 ECHO REQUESTS");
 
 		for(int i = 0; i <  REQUEST_NUM; i++) {
-			String sentence = "Hello" + i;
+			String sentence = "Hello " + i;
 			sendData = sentence.getBytes();
 		}
 		
-
 		//In UDP, you must contrusct the datagram explicitly, with 
 		//DatagramPacket below.
 		DatagramPacket sendPacket = new DatagramPacket(sendData,
@@ -51,6 +50,9 @@ public class MonitorClient {
 		//the send and receive can be a loop for multiple requests (lab 6)
 		clientSocket.send(sendPacket);
 
+		// Begin measuring execution time
+		long startTime = System.nanoTime();
+
 		System.out.println("Done. Waiting for return packet");
 
 		//must also create a receive packet to save server response
@@ -60,14 +62,14 @@ public class MonitorClient {
 		//This receive is a blocking method
 		//If no datagram arrives, the program holds here.
 		clientSocket.receive(receivePacket);
+		long endTime = System.nanoTime();
 
-		InetAddress returnIPAddress = receivePacket.getAddress();
-		//int port = receivePacket.getPort();
-		//System.out.println("From server at: " + returnIPAddress + ":" + port);
+		long requestRTT = endTime - startTime;
 
-		//String modifiedSentence = new String(receivePacket.getData());
+		System.out.println(receivePacket.getData());
 
-		//System.out.println("RETURNED MESSAGE FROM SERVER: " + modifiedSentence);
+		//InetAddress returnIPAddress = receivePacket.getAddress();
+		
 		clientSocket.close();
 	}
 }
